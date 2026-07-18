@@ -198,6 +198,11 @@ PHP authentication modules
 |         |the same server         |  - Hooks into     |    recommended         |
 |         |                        |    SAML infra     |                        |
 +---------+------------------------+-------------------+------------------------+
+|oidc     |Users are validated     |  - Federated login|  - Requires an OpenID  |
+|         |against an OpenID       |  - Single signon  |    Connect Identity    |
+|         |Connect Identity        |  - Single signoff |    Provider            |
+|         |Provider                |                   |                        |
++---------+------------------------+-------------------+------------------------+
 |idcheck  |For use with mod_idcheck|                   |                        |
 |         |idcheck.sourceforge.net |                   |                        |
 |         |Must be used together   |                   |                        |
@@ -340,6 +345,12 @@ others are left in for historical reasons:
 |         |                              |  - Single signoff  | - SAML         |
 |         |                              |  - Hooks into      |   knowledge    |
 |         |                              |    SAML infra      |   recommended  |
++---------+------------------------------+--------------------+----------------+
+|oidc     |Use when using OpenID Connect |  - Federated login | - Requires an  |
+|         |authentication.               |  - Single signon   |   OpenID       |
+|         |                              |  - Single signoff  |   Connect      |
+|         |                              |                    |   Identity     |
+|         |                              |                    |   Provider     |
 +---------+------------------------------+--------------------+----------------+
 
 How to configure authentication
@@ -889,6 +900,66 @@ do that.
 
 https://simplesamlphp.org/docs/stable/simplesamlphp-install
 https://simplesamlphp.org/docs/stable/simplesamlphp-sp
+
+
+OIDC Authentication
+--------------------
+
+Set in config.inc.php
+
+$auth['type'] = 'oidc';
+$auth['session'] = 'oidc';
+$auth['oidc']['provider_url'] = 'https://idp.example.com/realms/example';
+$auth['oidc']['client_id'] = 'mrbs';
+$auth['oidc']['client_secret'] = '...';
+$auth['oidc']['scopes'] = ['profile', 'email'];   // 'openid' is always added automatically
+$auth['oidc']['claims']['username'] = 'preferred_username';
+$auth['oidc']['claims']['email'] = 'email';
+$auth['oidc']['claims']['name'] = 'name';
+$auth['oidc']['admin']['groups'] = ['mrbs-admins'];
+// Optional access control filter
+$auth['oidc']['user']['groups'] = ['mrbs-users'];
+
+This scheme assumes that you've already registered MRBS as a client (relying
+party) with your OpenID Connect Identity Provider, and that the Identity
+Provider publishes an OIDC discovery document at
+"<provider_url>/.well-known/openid-configuration".  Unlike the 'cas' and
+'saml' schemes, no additional server-side infrastructure needs to be
+installed - MRBS talks to the Identity Provider directly using the
+jumbojett/openid-connect-php library.  Unlike the rest of MRBS's third party
+libraries, which are hand-vendored under web/lib, this one is installed with
+Composer (https://getcomposer.org/): run "composer install" in the top
+level of the MRBS installation (ie the directory containing this file)
+before enabling the 'oidc' scheme, to fetch it and its own dependencies into
+a "vendor" directory there.
+
+The redirect URI to register with the Identity Provider is simply the URL of
+whichever MRBS page a user first visits - like the 'cas' scheme, the
+Identity Provider redirects back to the same page that initiated the login,
+rather than to a separate, fixed callback page.
+
+$auth['oidc']['claims']['username'] (and, optionally, ['email'] and
+['name']) name the claims in the ID token to use for the corresponding MRBS
+user properties.  If your Identity Provider doesn't return a 'name' claim,
+MRBS falls back to combining the 'given_name' and 'family_name' claims.
+
+$auth['oidc']['admin'] maps a claim name (typically a group or role claim)
+to the list of values that should be given MRBS Administrator rights, in
+exactly the same way as $auth['saml']['admin'].  If you'd rather configure
+administrators using the $auth['admin'] list instead, unset
+$auth['oidc']['admin'].  $auth['oidc']['user'], if set, additionally
+restricts ordinary use of MRBS to users with one of the listed values in the
+named claim - anyone else who successfully logs in with the Identity
+Provider is nonetheless treated as not logged in within MRBS.
+
+By default, MRBS also asks the Identity Provider to log the user out when
+they log off from MRBS (RP-initiated logout, aka "single signoff"), if the
+Identity Provider's discovery document advertises an end_session_endpoint.
+Set $auth['oidc']['end_session_enabled'] = false to disable this and only
+log the user off locally.
+
+See web/systemdefaults.inc.php for the full list of $auth['oidc'][...]
+configuration settings, including PKCE and TLS options.
 
 
 Wix Authentication

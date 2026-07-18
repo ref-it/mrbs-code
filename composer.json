@@ -1,0 +1,12 @@
+{
+    "name": "mrbs/mrbs",
+    "description": "Third party PHP dependencies for MRBS that are installed via Composer, rather than hand-vendored under web/lib",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "jumbojett/openid-connect-php": "^1.0"
+    },
+    "config": {
+        "vendor-dir": "vendor"
+    }
+}

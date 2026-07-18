@@ -3,6 +3,7 @@
 web/config.inc.php.*
 web/css/custom.css
 web/config.inc.php
+/vendor
 
 /.settings
 /.project

@@ -1106,12 +1106,12 @@ $report_presentation_field_order = array();
 
 $auth["type"] = "db"; // How to validate the user/password. One of
                       // "auth_basic", "cas", "config", "crypt", "db", "db_ext", "idcheck",
-                      // "imap", "imap_php", "joomla", "ldap", "none", "nw", "pop3",
-                      // "saml", "wix" or "wordpress".
+                      // "imap", "imap_php", "joomla", "ldap", "none", "nw", "oidc",
+                      // "pop3", "saml", "wix" or "wordpress".
 
 $auth["session"] = "php"; // How to get and keep the user ID. One of
                           // "cas", "cookie", "host", "http", "ip", "joomla", "nt",
-                          // "omni", "php", "remote_user", "saml" or "wordpress".
+                          // "omni", "php", "oidc", "remote_user", "saml" or "wordpress".
 
 // Configuration parameters for 'cookie' session scheme
 
@@ -1519,6 +1519,58 @@ $auth['saml']['disable_mrbs_session_init'] = false;
 //
 // https://simplesamlphp.org/docs/stable/simplesamlphp-install
 // https://simplesamlphp.org/docs/stable/simplesamlphp-sp
+
+
+// 'auth_oidc' configuration settings
+
+// The base URL of your OpenID Connect Identity Provider, eg the realm URL for Keycloak,
+// or the tenant URL for Azure AD/Entra ID.  MRBS will look for the
+// "/.well-known/openid-configuration" discovery document under this URL.
+$auth['oidc']['provider_url'] = 'https://idp.example.com/realms/example';
+$auth['oidc']['client_id'] = '';
+$auth['oidc']['client_secret'] = '';
+
+// Additional scopes to request, beyond the "openid" scope which is always requested.
+$auth['oidc']['scopes'] = ['profile', 'email'];
+
+// Set to 'S256' (recommended, if your Identity Provider supports it) or 'plain' to use
+// PKCE.  Set to '' or unset to disable PKCE.
+$auth['oidc']['code_challenge_method'] = 'S256';
+
+// For production use, leave this set to true.  For quick testing you can set it to false
+// to disable TLS certificate verification of the Identity Provider - NOT RECOMMENDED for
+// production use.
+$auth['oidc']['verify_peer'] = true;
+
+// If your Identity Provider's certificate isn't signed by a CA in your system's default
+// trust store, set this to the path of a CA certificate (or bundle) to use instead.
+//$auth['oidc']['ca_cert_path'] = '/path/to/cachain.pem';
+
+// The claims in the ID token to use for the MRBS username, email address and display name.
+$auth['oidc']['claims']['username'] = 'preferred_username';
+$auth['oidc']['claims']['email'] = 'email';
+$auth['oidc']['claims']['name'] = 'name';
+
+// The next two settings allow you to use claims, eg group membership, to determine
+// who is an MRBS Administrator.  If any of the listed values is found in the named claim,
+// the user is given Administrator rights.  If you'd rather configure administrators using
+// the $auth['admin'] list above, then unset $auth['oidc']['admin'].
+$auth['oidc']['admin']['groups'] = ['mrbs-admins'];
+// Optional access control filter: if set, only users with one of these values in the named
+// claim are allowed to use MRBS at all (as ordinary users); everyone else is treated as
+// not logged in, even though their login with the Identity Provider succeeded.
+//$auth['oidc']['user']['groups'] = ['mrbs-users'];
+
+// Whether to notify the Identity Provider when a user logs off (RP-initiated logout), so
+// that they are also logged off the Identity Provider (ie a "single signoff").  Only takes
+// effect if the Identity Provider's discovery document advertises an end_session_endpoint.
+$auth['oidc']['end_session_enabled'] = true;
+
+// This scheme assumes that you've already registered MRBS as a client with your OpenID
+// Connect Identity Provider.  The redirect URI to register is simply the URL of whichever
+// MRBS page a user first visits, since - like the 'cas' scheme - the Identity Provider
+// redirects back to the same page that initiated the login.  See the AUTHENTICATION file
+// for more information.
 
 
 // 'auth_wix' configuration settings
