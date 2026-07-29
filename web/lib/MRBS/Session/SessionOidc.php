@@ -29,9 +29,10 @@ use function MRBS\url_base;
  *     $auth['oidc']['admin']['groups'] = ['mrbs-admins'];
  *
  * This scheme assumes that you've already registered MRBS as a client (relying party) with
- * your Identity Provider.  The redirect URI to register is simply the URL of whichever MRBS
- * page a user first visits, because - as with the 'cas' scheme - the Identity Provider
- * redirects back to the same page that initiated the login.
+ * your Identity Provider.  The redirect URI to register is the fixed URL of oidc_callback.php
+ * (eg "https://example.com/mrbs/oidc_callback.php") - the Identity Provider always redirects
+ * back there, regardless of which page a user first visited, and oidc_callback.php then sends
+ * the browser on to that original page.
  *
  * See the AUTHENTICATION file for more information.
  */
@@ -61,6 +62,11 @@ class SessionOidc extends SessionWithLogin
       $auth['oidc']['client_id'],
       $auth['oidc']['client_secret'] ?? null
     );
+
+    // Always come back to the same, fixed callback page, rather than the jumbojett
+    // library's default of the current page, so that only one redirect URI needs to
+    // be registered with the Identity Provider.
+    $this->client->setRedirectURL(url_base() . 'oidc_callback.php');
 
     if (!empty($auth['oidc']['scopes']))
     {
@@ -94,6 +100,10 @@ class SessionOidc extends SessionWithLogin
     {
       $target_url = $this->form['target_url'] ?? this_page(true);
     }
+
+    // Remember which page to return to once oidc_callback.php hears back from the
+    // Identity Provider (see the class doc comment above).
+    $this->set('oidc_target_url', $target_url);
 
     try
     {

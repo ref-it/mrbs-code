@@ -1567,10 +1567,11 @@ $auth['oidc']['admin']['groups'] = ['mrbs-admins'];
 $auth['oidc']['end_session_enabled'] = true;
 
 // This scheme assumes that you've already registered MRBS as a client with your OpenID
-// Connect Identity Provider.  The redirect URI to register is simply the URL of whichever
-// MRBS page a user first visits, since - like the 'cas' scheme - the Identity Provider
-// redirects back to the same page that initiated the login.  See the AUTHENTICATION file
-// for more information.
+// Connect Identity Provider.  The redirect URI to register is the fixed URL of
+// oidc_callback.php (eg "https://example.com/mrbs/oidc_callback.php") - the Identity
+// Provider always redirects back there, and oidc_callback.php then sends the browser on
+// to whichever page originally initiated the login.  See the AUTHENTICATION file for
+// more information.
 
 
 // 'auth_wix' configuration settings
