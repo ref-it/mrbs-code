@@ -54,12 +54,85 @@ if (!function_exists('clamp')) // Introduced in PHP 8.6
 }
 
 
+if (!function_exists('get_debug_type'))  // Introduced in PHP 8.0
+{
+  /**
+   * Gets the type name of a variable in a way that is suitable for debugging
+   *
+   * @copyright Fabien Potencier <fabien@symfony.com>
+   */
+  function get_debug_type($value): string
+  {
+    // Taken from https://github.com/symfony/polyfill-php80
+    //
+    // Copyright (c) 2020-present Fabien Potencier
+    //
+    // Permission is hereby granted, free of charge, to any person obtaining a copy
+    // of this software and associated documentation files (the "Software"), to deal
+    // in the Software without restriction, including without limitation the rights
+    // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    // copies of the Software, and to permit persons to whom the Software is furnished
+    // to do so, subject to the following conditions:
+    //
+    // The above copyright notice and this permission notice shall be included in all
+    // copies or substantial portions of the Software.
+    //
+    // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    // THE SOFTWARE.
+
+    switch (true) {
+      case null === $value: return 'null';
+      case \is_bool($value): return 'bool';
+      case \is_string($value): return 'string';
+      case \is_array($value): return 'array';
+      case \is_int($value): return 'int';
+      case \is_float($value): return 'float';
+      case \is_object($value): break;
+      case $value instanceof \__PHP_Incomplete_Class: return '__PHP_Incomplete_Class';
+      default:
+        if (null === $type = @get_resource_type($value)) {
+          return 'unknown';
+        }
+
+        if ('Unknown' === $type) {
+          $type = 'closed';
+        }
+
+        return "resource ($type)";
+    }
+
+    $class = \get_class($value);
+
+    if (false === strpos($class, '@')) {
+      return $class;
+    }
+
+    return (get_parent_class($class) ?: key(class_implements($class)) ?: 'class').'@anonymous';
+  }
+}
+
+
 if (!function_exists('json_validate'))  // Introduced in PHP 8.3
 {
   function json_validate(string $json, int $depth = 512, int $flags = 0): bool
   {
     json_decode($json, null, $depth, $flags);
     return json_last_error() === JSON_ERROR_NONE;
+  }
+}
+
+
+// Emulation of mb_check_encoding()
+if (!function_exists('mb_check_encoding'))
+{
+  function mb_check_encoding($value = null, ?string $encoding = null): bool
+  {
+    return Mbstring::mb_check_encoding($value, $encoding);
   }
 }
 
@@ -79,6 +152,11 @@ if (!function_exists('mb_regex_encoding'))
 {
   function mb_regex_encoding(?string $encoding=null)
   {
+    if (version_compare(PHP_VERSION, '8.6', '>='))
+    {
+      $message = 'Function mb_regex_encoding() is deprecated since 8.6, because the underlying library is no longer maintained';
+      trigger_error($message, E_USER_DEPRECATED);
+    }
     return Mbstring::mb_regex_encoding($encoding);
   }
 }
@@ -90,6 +168,30 @@ if (!function_exists('mb_split'))
   function mb_split(string $pattern, string $string, int $limit = -1)
   {
     return Mbstring::mb_split($pattern, $string, $limit);
+  }
+}
+
+
+// Emulation of mb_str_split()
+// Note that it was only introduced in PHP 7.4, but we offer it anyway even if the PHP version is less than 7.4, as
+// some code may rely on it.
+if (!function_exists('mb_str_split'))
+{
+  function mb_str_split(string $string, int $length = 1, ?string $encoding = null)
+  {
+    if ($length < 1)
+    {
+      if (version_compare(PHP_VERSION, '8.0', '>='))
+      {
+        throw new ValueError('Argument #2 ($length) must be greater than 0');
+      }
+      else
+      {
+        trigger_error('mb_str_split(): The length of each segment must be greater than zero', E_USER_WARNING);
+        return false;
+      }
+    }
+    return Mbstring::mb_str_split($string, $length, $encoding);
   }
 }
 
